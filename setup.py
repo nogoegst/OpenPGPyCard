@@ -35,7 +35,7 @@ setup(
     install_requires=[
         'pycrypto>=2.6.1',
         'pyscard>=1.7.0',
-        'future>=0.14.0',
+        'future>=0.14.0'
         ],
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -43,6 +43,6 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.3'
     ]
 )
