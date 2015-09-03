@@ -131,3 +131,12 @@ class OpenPGPCard():
         self.errorchecker(data, sw1, sw2)
         signature_bytes = bytes(data)
         return signature_bytes
+
+    def set_forcesig(self, value=0x01):
+        PUT_DATA = [0x00, 0xDA]
+        TAG = [0x00, 0xC4]
+        LC = [0x01]
+        VALUE = [value]
+        data, sw1, sw2 = self.connection.transmit( PUT_DATA + TAG + LC + VALUE )
+        self.errorchecker(data, sw1, sw2)
+
