@@ -55,6 +55,10 @@ class OpenPGPCard():
         PW = getpass.getpass('Enter PIN: ')
         return self.verify_pw(0x81, PW)
     
+    def verify_pin2(self):
+        PW = getpass.getpass('Enter PIN: ')
+        return self.verify_pw(0x82, PW)
+
     def verify_admin_pin(self):
         PW = getpass.getpass('Enter Admin PIN: ')
         return self.verify_pw(0x83, PW)
@@ -116,6 +120,16 @@ class OpenPGPCard():
 
     def sign_digest(self, digest):#Sign a digest
         SIGN_HEADER = [0x00, 0x2A, 0x9E, 0x9A]
+        DIGEST = [int(x) for x in digest]
+        LC = [len(DIGEST)]
+        LE = [0x00]
+        data, sw1, sw2 = self.connection.transmit( SIGN_HEADER + LC + DIGEST + LE)
+        self.errorchecker(data, sw1, sw2)
+        signature_bytes = bytes(data)
+        return signature_bytes
+
+    def sign_digest_with_auth(self, digest):#Sign a digest
+        SIGN_HEADER = [0x00, 0x88, 0x00, 0x00]
         DIGEST = [int(x) for x in digest]
         LC = [len(DIGEST)]
         LE = [0x00]

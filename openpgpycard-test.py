@@ -17,13 +17,17 @@ if __name__ == "__main__":
     #card.verify_admin_pin()
     #card.gen_keypair()
     
-    #card.verify_pin()
-    #digest = hashlib.sha1("msga".encode('utf-8')).digest()
-    #hexdigest = binascii.hexlify(digest)
-    #print("Digest = " + hexdigest.decode('utf-8'))
-    #signature = card.sign_digest(digest)
-    #print(signature)
-        #hexsignature = ''.join("{:02x}".format(byte) for byte in data)
-        #print("Signature = "+ hexsignature)
-        #print("Length of the signature = " + repr(len(data)*8) + " bits")
+    card.verify_pin()
+    digest = hashlib.sha1("msga".encode('utf-8')).digest()
+    hexdigest = binascii.hexlify(digest)
+    print("Digest = " + hexdigest.decode('utf-8'))
 
+    signature = card.sign_digest(digest)
+    phex(signature)
+    print("Length of the signature = " + repr(len(signature)*8) + " bits")
+
+    card.verify_pin2()
+
+    signature = card.sign_digest_with_auth(digest)
+    phex(signature)
+    print("Length of the signature = " + repr(len(signature)*8) + " bits")
