@@ -71,16 +71,19 @@ class OpenPGPCard():
         data, sw1, sw2 = self.connection.transmit( VERIFY + LC + PW)
         self.errorchecker(data, sw1, sw2)
 
-    def get_pubkey(self):
-        return self.keypair_action(0x81)
+    def get_pubkey(self, keypair):
+        return self.keypair_action(0x81, keypair)
 
-    def gen_keypair(self):
-        return self.keypair_action(0x80)
+    def gen_keypair(self, keypair):
+        return self.keypair_action(0x80, keypair)
 
-    def keypair_action(self, P1):
+    def keypair_action(self, P1, keypair):
         HEADER = [0x00, 0x47, P1, 0x00]
         LC = [0x02]
-        CRT = [0xB6, 0x00]
+        CRTs = {'decryption' : [0xB8,0x00],
+                'signature' : [0xB6, 0x00],
+                'authentication' : [0xA4, 0x00]}
+        CRT = CRTs[keypair]
         LE = [0x00]
         data, sw1, sw2 = self.connection.transmit( HEADER + LC + CRT + LE)
         self.errorchecker(data, sw1, sw2)
