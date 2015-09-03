@@ -30,12 +30,12 @@ if __name__ == "__main__":
     hexdigest = binascii.hexlify(digest)
     print("Digest = " + hexdigest.decode('utf-8'))
 
-    signature = card.sign_digest(digest)
+    signature = card.sign_digest(digest, 'signature')
     phex(signature)
     print("Length of the signature = " + repr(len(signature)*8) + " bits")
 
     card.verify_pin2()
 
-    signature = card.sign_digest_with_auth(digest)
+    signature = card.sign_digest(digest, 'authentication')
     phex(signature)
     print("Length of the signature = " + repr(len(signature)*8) + " bits")

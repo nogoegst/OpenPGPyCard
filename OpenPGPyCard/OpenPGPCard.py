@@ -121,24 +121,13 @@ class OpenPGPCard():
         public_key = Crypto.PublicKey.RSA.construct((modulus, exponent))
         return public_key
 
-    def sign_digest(self, digest):#Sign a digest
-        SIGN_HEADER = [0x00, 0x2A, 0x9E, 0x9A]
+    def sign_digest(self, digest, keypair):#Sign a digest
+        SIGN_CMDs = {'signature' : [0x00, 0x2A, 0x9E, 0x9A],
+                     'authentication' : [0x00, 0x88, 0x00, 0x00]}
         DIGEST = [int(x) for x in digest]
         LC = [len(DIGEST)]
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( SIGN_HEADER + LC + DIGEST + LE)
+        data, sw1, sw2 = self.connection.transmit( SIGN_CMDs[keypair] + LC + DIGEST + LE)
         self.errorchecker(data, sw1, sw2)
         signature_bytes = bytes(data)
         return signature_bytes
-
-    def sign_digest_with_auth(self, digest):#Sign a digest
-        SIGN_HEADER = [0x00, 0x88, 0x00, 0x00]
-        DIGEST = [int(x) for x in digest]
-        LC = [len(DIGEST)]
-        LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( SIGN_HEADER + LC + DIGEST + LE)
-        self.errorchecker(data, sw1, sw2)
-        signature_bytes = bytes(data)
-        return signature_bytes
-
-
