@@ -5,6 +5,7 @@ from smartcard.util import toBytes
 import getpass
 import Crypto.Util.number
 import Crypto.PublicKey.RSA
+from addict import Dict
 
 class OpenPGPCard():
     
@@ -26,6 +27,20 @@ class OpenPGPCard():
         LE = [0x00]
         data, sw1, sw2 = self.connection.transmit( SELECT )
         self.errorchecker(data, sw1, sw2)
+
+    def get_aid(self): #Get AID
+        GET_DATA = [0x00, 0xCA]
+        TAG = [0x00, 0x4F]
+        LE = [0x00]
+        data, sw1, sw2 = self.connection.transmit( GET_DATA + TAG + LE)
+        self.errorchecker(data, sw1, sw2)
+        aid = bytes(data)
+        if len(aid) != 16:
+            raise
+        AID = Dict()
+        (AID.RID, AID.PIX, AID.version, AID.vendor, AID.serial, AID.RFU) = \
+        (aid[:5], aid[5:6], aid[6:8], aid[8:10], aid[10:14], aid[14:16])
+        return AID
 
     def get_url(self): #Get URL
         GET_DATA = [0x00, 0xCA] 
