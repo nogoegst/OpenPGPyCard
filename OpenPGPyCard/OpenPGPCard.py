@@ -40,6 +40,9 @@ class OpenPGPCard():
         AID = Dict()
         (AID.RID, AID.PIX, AID.version, AID.vendor, AID.serial, AID.RFU) = \
         (aid[:5], aid[5:6], aid[6:8], aid[8:10], aid[10:14], aid[14:16])
+        self.version = AID.version
+        self.vendor = AID.vendor
+        self.serial = AID.serial
         return AID
 
     def get_url(self): #Get URL

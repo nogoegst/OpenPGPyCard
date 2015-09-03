@@ -10,9 +10,9 @@ if __name__ == "__main__":
     card = OpenPGPCard()
     card.connect()
     card.select_app() 
-    aid = card.get_aid()
-    phex(aid.version)
-    phex(aid.serial)
+    card.get_aid()
+    phex(card.version)
+    phex(card.serial)
 
     print(card.get_url())
     key_auth = card.get_pubkey('authentication')
