@@ -64,6 +64,7 @@ class OpenPGPCard():
         aid = bytes(data)
         if len(aid) != 16:
             raise
+        self.aid = ''.join("{:02X}".format(byte) for byte in aid)
         AID = Dict()
         (AID.RID, AID.PIX, AID.version, AID.vendor, AID.serial, AID.RFU) = \
         (aid[:5], aid[5:6], aid[6:8], aid[8:10], aid[10:14], aid[14:16])
