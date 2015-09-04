@@ -8,9 +8,10 @@ phex = lambda x: print(''.join("{:02x}".format(byte) for byte in x))
 
 if __name__ == "__main__":
     card = OpenPGPCard()
-    card.connect()
-    card.select_app() 
-    card.get_aid()
+    #card.connect()
+    #card.select_app() 
+    #card.get_aid()
+    card.prepare()
     print(card.version)
     print(card.serial)
 

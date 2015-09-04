@@ -45,6 +45,11 @@ class OpenPGPCard():
         self.serial = ''.join("{:02X}".format(byte) for byte in AID.serial)
         return AID
 
+    def prepare(self):
+        self.connect()
+        self.select_app()
+        self.get_aid()
+
     def get_url(self): #Get URL
         GET_DATA = [0x00, 0xCA] 
         TAG = [0x5F, 0x50]
