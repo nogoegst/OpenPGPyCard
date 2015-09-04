@@ -11,8 +11,8 @@ if __name__ == "__main__":
     card.connect()
     card.select_app() 
     card.get_aid()
-    phex(card.version)
-    phex(card.serial)
+    print(card.version)
+    print(card.serial)
 
     print(card.get_url())
     key_auth = card.get_pubkey('authentication')

@@ -40,9 +40,9 @@ class OpenPGPCard():
         AID = Dict()
         (AID.RID, AID.PIX, AID.version, AID.vendor, AID.serial, AID.RFU) = \
         (aid[:5], aid[5:6], aid[6:8], aid[8:10], aid[10:14], aid[14:16])
-        self.version = AID.version
+        self.version = str(AID.version[0]) + '.' + str(AID.version[1])
         self.vendor = AID.vendor
-        self.serial = AID.serial
+        self.serial = ''.join("{:02X}".format(byte) for byte in AID.serial)
         return AID
 
     def get_url(self): #Get URL
@@ -55,15 +55,15 @@ class OpenPGPCard():
         return url
 
     def verify_pin(self):
-        PW = getpass.getpass('Enter PIN: ')
+        PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
         return self.verify_pw(0x81, PW)
     
     def verify_pin2(self):
-        PW = getpass.getpass('Enter PIN: ')
+        PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
         return self.verify_pw(0x82, PW)
 
     def verify_admin_pin(self):
-        PW = getpass.getpass('Enter Admin PIN: ')
+        PW = getpass.getpass('Enter Admin PIN for the card '+self.serial+': ')
         return self.verify_pw(0x83, PW)
     
     def verify_pw(self, P2, PW): #Verify PW1
