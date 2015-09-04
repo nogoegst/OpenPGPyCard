@@ -7,6 +7,33 @@ import Crypto.Util.number
 import Crypto.PublicKey.RSA
 from addict import Dict
 
+def bpop(b, l=1):
+    p = b[:l]
+    del b[:l]
+    return bytes(p)
+
+def x690_len(data):
+    len_octet = bpop(data)
+    if int.from_bytes(len_octet, byteorder='big') >> 7: # long form
+        # Initial octet
+        len_octets = int.from_bytes(len_octet, byteorder='big') & 0b01111111
+        length = bpop(data, len_octets)
+    else:
+        length = len_octet
+    return int.from_bytes(length, byteorder='big')
+
+def parse_DO(data):
+    DO = Dict()
+    header = bpop(data, 2)
+    length = x690_len(data)
+    data = bytearray(bpop(data, length))
+    while len(data) != 0:
+        tag = bpop(data)
+        tag_length =x690_len(data)
+        tag_data = bpop(data, tag_length)
+        DO[header][tag]=tag_data
+    return DO
+
 class OpenPGPCard():
     
     def __init__(self):
@@ -85,6 +112,8 @@ class OpenPGPCard():
     def gen_keypair(self, keypair):
         return self.keypair_action(0x80, keypair)
 
+
+
     def keypair_action(self, P1, keypair):
         HEADER = [0x00, 0x47, P1, 0x00]
         LC = [0x02]
@@ -95,36 +124,14 @@ class OpenPGPCard():
         LE = [0x00]
         data, sw1, sw2 = self.connection.transmit( HEADER + LC + CRT + LE)
         self.errorchecker(data, sw1, sw2)
-        #hexpublickey = ''.join("{:02x}".format(byte) for byte in data)
-        #print("Publickey-DO = " + hexpublickey)
 
-        if data[0:2] != [0x7F, 0x49]:
-            print("Wrong DO")
-            return
-        i = 5
-        if data[i] != 0x81:
-            print("No modulus!")
-            return
-        i+=1
-        modulus_length = data[i]
-        i+=1
-        modulus = data[i:i+modulus_length]
-        hexmodulus = ''.join("{:02x}".format(byte) for byte in modulus)
-        #print("n = " + hexmodulus)
-        #print("Modulus length  = " + repr(len(modulus)*8) + " bits")
-        i+=modulus_length
-        if data[i] != 0x82:
-            print("No exponent?")
-            return 
-        i+=1
-        exponent_length = data[i]
-        i+=1
-        exponent = data[i:i+exponent_length]
-        hexexponent = ''.join("{:02x}".format(byte) for byte in exponent)
-        #print("Exponent = " + hexexponent)
+        DO = parse_DO(bytearray(data))
 
-        modulus = Crypto.Util.number.bytes_to_long(bytes(modulus))
-        exponent = Crypto.Util.number.bytes_to_long(bytes(exponent))
+        modulus = DO[b'\x7F\x49'][b'\x81']
+        exponent = DO[b'\x7F\x49'][b'\x82']
+
+        modulus = Crypto.Util.number.bytes_to_long(modulus)
+        exponent = Crypto.Util.number.bytes_to_long(exponent)
 
         public_key = Crypto.PublicKey.RSA.construct((modulus, exponent))
         return public_key
