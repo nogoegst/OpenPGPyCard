@@ -47,6 +47,11 @@ class OpenPGPCard():
         response = subprocess.check_output(('gpg-connect-agent', '--hex',
                         'scd apdu '+ toHexString(APDU), '/bye'))
         response = response.decode()
+        print(response)
+        if response[:3] == 'ERR':
+            error_msg = response[4:-6]
+            print(error_msg)
+            raise
         response = response.split('\n')
         data = ' '.join([ line[9:57] for line in response])
         data = toBytes(data)
