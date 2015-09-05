@@ -1,11 +1,12 @@
 from smartcard.sw.ISO7816_4ErrorChecker import ISO7816_4ErrorChecker
 from smartcard.CardType import ATRCardType
 from smartcard.CardRequest import CardRequest
-from smartcard.util import toBytes
+from smartcard.util import toBytes, toHexString
 import getpass
 import Crypto.Util.number
 import Crypto.PublicKey.RSA
 from addict import Dict
+import subprocess
 
 def bpop(b, l=1):
     p = b[:l]
@@ -36,30 +37,57 @@ def parse_DO(data):
 
 class OpenPGPCard():
     
-    def __init__(self):
-        self.ATR = toBytes("3B DA 18 FF 81 B1 FE 75 1F 03 00 31 C5 73 C0 01 40 00 90 00 0C")
-        
+    def __init__(self, transmitter='pcscd'):
         self.errorchecker = ISO7816_4ErrorChecker()
-        cardtype = ATRCardType(self.ATR)
+        self.transmitter = transmitter
+        if transmitter == 'pcscd':
+            self.pcscd_prepare()
+
+    def scd_transmit(self, APDU):
+        response = subprocess.check_output(('gpg-connect-agent', '--hex',
+                        'scd apdu '+ toHexString(APDU), '/bye'))
+        response = response.decode()
+        response = response.split('\n')
+        data = ' '.join([ line[9:57] for line in response])
+        data = toBytes(data)
+        return (data[:-2], data[-2], data[-1])
+
+    def transmit(self, APDU):
+        if self.transmitter == 'pcscd':
+            return self.connection.transmit(APDU)
+        elif self.transmitter == 'scd':
+            return self.scd_transmit(APDU)
+        else:
+            raise
+
+    def wait(self):
+        ATR = toBytes("3B DA 18 FF 81 B1 FE 75 1F 03 00 31 C5 73 C0 01 40 00 90 00 0C")
+        cardtype = ATRCardType(ATR)
         cardrequest = CardRequest(timeout=None, cardType=cardtype)
         cardservice = cardrequest.waitforcard()
         self.connection = cardservice.connection
 
     def connect(self):
         self.connection.connect()
-        
+
     def select_app(self): #Select application
         SELECT = [0x00, 0xA4, 0x04, 0x00, 0x06, 0xD2, 0x76, 0x00, 0x01, 0x24, 0x01, 0x00]
         GET_DATA = [0x00, 0xCA] 
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( SELECT )
+        data, sw1, sw2 = self.transmit( SELECT )
         self.errorchecker(data, sw1, sw2)
+
+    def pcscd_prepare(self):
+        self.wait()
+        self.connect()
+        self.select_app()
+        self.get_aid()
 
     def get_aid(self): #Get AID
         GET_DATA = [0x00, 0xCA]
         TAG = [0x00, 0x4F]
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( GET_DATA + TAG + LE)
+        data, sw1, sw2 = self.transmit( GET_DATA + TAG + LE)
         self.errorchecker(data, sw1, sw2)
         aid = bytes(data)
         if len(aid) != 16:
@@ -73,16 +101,11 @@ class OpenPGPCard():
         self.serial = ''.join("{:02X}".format(byte) for byte in AID.serial)
         return AID
 
-    def prepare(self):
-        self.connect()
-        self.select_app()
-        self.get_aid()
-
     def get_url(self): #Get URL
         GET_DATA = [0x00, 0xCA] 
         TAG = [0x5F, 0x50]
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( GET_DATA + TAG + LE)
+        data, sw1, sw2 = self.transmit( GET_DATA + TAG + LE)
         self.errorchecker(data, sw1, sw2)
         url = ''.join([chr(x) for x in data])
         return url
@@ -104,7 +127,7 @@ class OpenPGPCard():
         VERIFY.append(P2)
         PW = [ord(x) for x in PW]
         LC = [len(PW)]
-        data, sw1, sw2 = self.connection.transmit( VERIFY + LC + PW)
+        data, sw1, sw2 = self.transmit( VERIFY + LC + PW)
         self.errorchecker(data, sw1, sw2)
 
     def get_pubkey(self, keypair):
@@ -123,7 +146,7 @@ class OpenPGPCard():
                 'authentication' : [0xA4, 0x00]}
         CRT = CRTs[keypair]
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( HEADER + LC + CRT + LE)
+        data, sw1, sw2 = self.transmit( HEADER + LC + CRT + LE)
         self.errorchecker(data, sw1, sw2)
 
         DO = parse_DO(bytearray(data))
@@ -143,7 +166,7 @@ class OpenPGPCard():
         DIGEST = [int(x) for x in digest]
         LC = [len(DIGEST)]
         LE = [0x00]
-        data, sw1, sw2 = self.connection.transmit( SIGN_CMDs[keypair] + LC + DIGEST + LE)
+        data, sw1, sw2 = self.transmit( SIGN_CMDs[keypair] + LC + DIGEST + LE)
         self.errorchecker(data, sw1, sw2)
         signature_bytes = bytes(data)
         return signature_bytes
@@ -153,6 +176,6 @@ class OpenPGPCard():
         TAG = [0x00, 0xC4]
         LC = [0x01]
         VALUE = [value]
-        data, sw1, sw2 = self.connection.transmit( PUT_DATA + TAG + LC + VALUE )
+        data, sw1, sw2 = self.transmit( PUT_DATA + TAG + LC + VALUE )
         self.errorchecker(data, sw1, sw2)
 

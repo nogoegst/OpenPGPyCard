@@ -7,11 +7,12 @@ import Crypto.Util.number
 phex = lambda x: print(''.join("{:02x}".format(byte) for byte in x))
 
 if __name__ == "__main__":
-    card = OpenPGPCard()
+    card = OpenPGPCard(transmitter='pcscd')
     #card.connect()
     #card.select_app() 
     #card.get_aid()
-    card.prepare()
+    #card.prepare()
+    card.get_aid()
     print(card.version)
     print(card.serial)
 
@@ -22,12 +23,11 @@ if __name__ == "__main__":
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
     key_auth = card.get_pubkey('decryption')
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    card.verify_admin_pin()
+    #card.verify_admin_pin()
     #card.gen_keypair()
 
-    card.set_forcesig(0x00)
+    #card.set_forcesig(0x00)
     
-    sys.exit()
     card.verify_pin()
     digest = hashlib.sha1("msga".encode('utf-8')).digest()
     hexdigest = binascii.hexlify(digest)
