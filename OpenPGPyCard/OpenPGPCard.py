@@ -42,7 +42,7 @@ class OpenPGPCard():
         self.transmitter = transmitter
         if transmitter == 'pcscd':
             self.pcscd_prepare()
-
+        self.get_aid()
     def scd_transmit(self, APDU):
         response = subprocess.check_output(('gpg-connect-agent', '--hex',
                         'scd apdu '+ toHexString(APDU), '/bye'))

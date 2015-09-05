@@ -7,12 +7,12 @@ import Crypto.Util.number
 phex = lambda x: print(''.join("{:02x}".format(byte) for byte in x))
 
 if __name__ == "__main__":
-    card = OpenPGPCard(transmitter='pcscd')
+    card = OpenPGPCard(transmitter='scd')
     #card.connect()
     #card.select_app() 
     #card.get_aid()
     #card.prepare()
-    card.get_aid()
+    #card.get_aid()
     print(card.version)
     print(card.serial)
 
