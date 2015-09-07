@@ -25,6 +25,7 @@ def x690_len(data):
     return int.from_bytes(length, byteorder='big')
 
 def parse_DO(data):
+    data = bytearray(data)
     DO = Dict()
     header = bpop(data, 2)
     length = x690_len(data)
@@ -44,9 +45,13 @@ class OpenPGPCard():
         if transmitter == 'pcscd':
             self.pcscd_prepare()
         self.get_aid()
+
+    def checkerrors(self, sw1, sw2):
+        return self.errorchecker([], sw1, sw2)
+
     def scd_transmit(self, APDU):
         response = subprocess.check_output(('gpg-connect-agent', '--hex',
-                        'scd apdu '+ binascii.hexlify(bytes(APDU)).decode('ascii'), '/bye'))
+                        'scd apdu '+ binascii.hexlify(APDU).decode('ascii'), '/bye'))
         response = response.decode()
         if response[:3] == 'ERR':
             error_msg = response[4:-6]
@@ -56,16 +61,18 @@ class OpenPGPCard():
         data = ' '.join([ line[9:57] for line in response])
         data = bytes.fromhex(data)
         data = unquote_to_bytes(data)
-        data = list(data)
         return (data[:-2], data[-2], data[-1])
 
     def transmit(self, APDU):
         if self.transmitter == 'pcscd':
-            return self.connection.transmit(APDU)
+            (data, sw1, sw2) = self.connection.transmit(list(APDU))
+            data = bytes(data)
         elif self.transmitter == 'scd':
-            return self.scd_transmit(APDU)
+            (data, sw1, sw2) = self.scd_transmit(APDU)
         else:
             raise
+        self.checkerrors(sw1, sw2)
+        return data
 
     def wait(self):
         ATR = list(bytes.fromhex("3BDA18FF81B1FE751F030031C573C001400090000C"))
@@ -78,85 +85,73 @@ class OpenPGPCard():
         self.connection.connect()
 
     def select_app(self): #Select application
-        SELECT = [0x00, 0xA4, 0x04, 0x00, 0x06, 0xD2, 0x76, 0x00, 0x01, 0x24, 0x01, 0x00]
-        GET_DATA = [0x00, 0xCA] 
-        LE = [0x00]
-        data, sw1, sw2 = self.transmit( SELECT )
-        self.errorchecker(data, sw1, sw2)
+        SELECT = b'\x00\xA4\x04\x00\x06\xD2\x76\x00\x01\x24\x01\x00'
+        self.transmit( SELECT )
 
     def pcscd_prepare(self):
         self.wait()
         self.connect()
         self.select_app()
-        self.get_aid()
 
-    def get_aid(self): #Get AID
-        GET_DATA = [0x00, 0xCA]
-        TAG = [0x00, 0x4F]
-        LE = [0x00]
-        data, sw1, sw2 = self.transmit( GET_DATA + TAG + LE)
-        self.errorchecker(data, sw1, sw2)
-        aid = bytes(data)
+    def get_aid(self):
+        GET_DATA = b'\x00\xCA'
+        TAG = b'\x00\x4F'
+        LE = b'\x00'
+        aid = self.transmit( GET_DATA + TAG + LE)
         if len(aid) != 16:
             raise
-        self.aid = ''.join("{:02X}".format(byte) for byte in aid)
+        self.aid = binascii.hexlify(aid).decode('ascii').upper()
         AID = Dict()
         (AID.RID, AID.PIX, AID.version, AID.vendor, AID.serial, AID.RFU) = \
         (aid[:5], aid[5:6], aid[6:8], aid[8:10], aid[10:14], aid[14:16])
         self.version = str(AID.version[0]) + '.' + str(AID.version[1])
         self.vendor = AID.vendor
-        self.serial = ''.join("{:02X}".format(byte) for byte in AID.serial)
+        self.serial = binascii.hexlify(AID.serial).decode('ascii').upper()
         return AID
 
-    def get_url(self): #Get URL
-        GET_DATA = [0x00, 0xCA] 
-        TAG = [0x5F, 0x50]
-        LE = [0x00]
-        data, sw1, sw2 = self.transmit( GET_DATA + TAG + LE)
-        self.errorchecker(data, sw1, sw2)
-        url = ''.join([chr(x) for x in data])
+    def get_url(self):
+        GET_DATA = b'\x00\xCA'
+        TAG = b'\x5F\x50'
+        LE = b'\x00'
+        data = self.transmit( GET_DATA + TAG + LE)
+        url = data.decode('ascii')
         return url
 
     def verify_pin(self):
         PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
-        return self.verify_pw(0x81, PW)
+        return self.verify_pw(b'\x81', PW)
     
     def verify_pin2(self):
         PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
-        return self.verify_pw(0x82, PW)
+        return self.verify_pw(b'\x82', PW)
 
     def verify_admin_pin(self):
         PW = getpass.getpass('Enter Admin PIN for the card '+self.serial+': ')
-        return self.verify_pw(0x83, PW)
+        return self.verify_pw(b'\x83', PW)
     
-    def verify_pw(self, P2, PW): #Verify PW1
-        VERIFY = [0x00, 0x20, 0x00]
-        VERIFY.append(P2)
-        PW = [ord(x) for x in PW]
-        LC = [len(PW)]
-        data, sw1, sw2 = self.transmit( VERIFY + LC + PW)
-        self.errorchecker(data, sw1, sw2)
+    def verify_pw(self, P2, PW):
+        VERIFY = b'\x00\x20\x00' + P2
+        PW = PW.encode('ascii')
+        LC = bytes([len(PW)])
+        self.transmit(VERIFY + LC + PW)
 
     def get_pubkey(self, keypair):
-        return self.keypair_action(0x81, keypair)
+        return self.keypair_action(b'\x81', keypair)
 
     def gen_keypair(self, keypair):
-        return self.keypair_action(0x80, keypair)
-
-
+        return self.keypair_action(b'\x80', keypair)
 
     def keypair_action(self, P1, keypair):
-        HEADER = [0x00, 0x47, P1, 0x00]
-        LC = [0x02]
-        CRTs = {'decryption' : [0xB8,0x00],
-                'signature' : [0xB6, 0x00],
-                'authentication' : [0xA4, 0x00]}
+        HEADER = b'\x00\x47' + P1 + b'\x00'
+        LC = b'\x02'
+        CRTs = {'decryption' : b'\xB8\x00',
+                'signature' : b'\xB6\x00',
+                'authentication' : b'\xA4\x00'}
         CRT = CRTs[keypair]
-        LE = [0x00]
-        data, sw1, sw2 = self.transmit( HEADER + LC + CRT + LE)
-        self.errorchecker(data, sw1, sw2)
+        LE = b'\x00'
+        data = self.transmit( HEADER + LC + CRT + LE)
 
-        DO = parse_DO(bytearray(data))
+        DO = parse_DO(data)
 
         modulus = DO[b'\x7F\x49'][b'\x81']
         exponent = DO[b'\x7F\x49'][b'\x82']
@@ -167,22 +162,17 @@ class OpenPGPCard():
         public_key = Crypto.PublicKey.RSA.construct((modulus, exponent))
         return public_key
 
-    def sign_digest(self, digest, keypair):#Sign a digest
-        SIGN_CMDs = {'signature' : [0x00, 0x2A, 0x9E, 0x9A],
-                     'authentication' : [0x00, 0x88, 0x00, 0x00]}
-        DIGEST = [int(x) for x in digest]
-        LC = [len(DIGEST)]
-        LE = [0x00]
-        data, sw1, sw2 = self.transmit( SIGN_CMDs[keypair] + LC + DIGEST + LE)
-        self.errorchecker(data, sw1, sw2)
-        signature_bytes = bytes(data)
-        return signature_bytes
+    def sign_digest(self, digest, keypair):
+        SIGNING_KEY = {'signature' : b'\x00\x2A\x9E\x9A',
+                     'authentication' : b'\x00\x88\x00\x00'}
+        LC = bytes([len(digest)])
+        LE = b'\x00'
+        signature = self.transmit( SIGNING_KEY[keypair] + LC + digest + LE)
+        return signature
 
-    def set_forcesig(self, value=0x01):
-        PUT_DATA = [0x00, 0xDA]
-        TAG = [0x00, 0xC4]
-        LC = [0x01]
-        VALUE = [value]
-        data, sw1, sw2 = self.transmit( PUT_DATA + TAG + LC + VALUE )
-        self.errorchecker(data, sw1, sw2)
+    def set_forcesig(self, value=b'\x01'):
+        PUT_DATA = b'\x00\xDA'
+        TAG = b'\x00\xC4'
+        LC = b'\x01'
+        self.transmit( PUT_DATA + TAG + LC + value )
 
