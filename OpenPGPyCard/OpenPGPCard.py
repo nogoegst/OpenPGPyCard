@@ -1,12 +1,13 @@
 from smartcard.sw.ISO7816_4ErrorChecker import ISO7816_4ErrorChecker
 from smartcard.CardType import ATRCardType
 from smartcard.CardRequest import CardRequest
-from smartcard.util import toBytes, toHexString
 import getpass
 import Crypto.Util.number
 import Crypto.PublicKey.RSA
 from addict import Dict
 import subprocess
+from urllib.parse import unquote_to_bytes
+import binascii
 
 def bpop(b, l=1):
     p = b[:l]
@@ -45,16 +46,17 @@ class OpenPGPCard():
         self.get_aid()
     def scd_transmit(self, APDU):
         response = subprocess.check_output(('gpg-connect-agent', '--hex',
-                        'scd apdu '+ toHexString(APDU), '/bye'))
+                        'scd apdu '+ binascii.hexlify(bytes(APDU)).decode('ascii'), '/bye'))
         response = response.decode()
-        print(response)
         if response[:3] == 'ERR':
             error_msg = response[4:-6]
             print(error_msg)
             raise
         response = response.split('\n')
         data = ' '.join([ line[9:57] for line in response])
-        data = toBytes(data)
+        data = bytes.fromhex(data)
+        data = unquote_to_bytes(data)
+        data = list(data)
         return (data[:-2], data[-2], data[-1])
 
     def transmit(self, APDU):
@@ -66,7 +68,7 @@ class OpenPGPCard():
             raise
 
     def wait(self):
-        ATR = toBytes("3B DA 18 FF 81 B1 FE 75 1F 03 00 31 C5 73 C0 01 40 00 90 00 0C")
+        ATR = list(bytes.fromhex("3BDA18FF81B1FE751F030031C573C001400090000C"))
         cardtype = ATRCardType(ATR)
         cardrequest = CardRequest(timeout=None, cardType=cardtype)
         cardservice = cardrequest.waitforcard()
