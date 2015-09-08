@@ -94,10 +94,7 @@ class OpenPGPCard():
         self.select_app()
 
     def get_aid(self):
-        GET_DATA = b'\x00\xCA'
-        TAG = b'\x00\x4F'
-        LE = b'\x00'
-        aid = self.transmit( GET_DATA + TAG + LE)
+        aid = self.get_data(b'\x00\x4F')
         if len(aid) != 16:
             raise
         self.aid = binascii.hexlify(aid).decode('ascii').upper()
@@ -109,13 +106,24 @@ class OpenPGPCard():
         self.serial = binascii.hexlify(AID.serial).decode('ascii').upper()
         return AID
 
-    def get_url(self):
+    def get_data(self, tag):
         GET_DATA = b'\x00\xCA'
-        TAG = b'\x5F\x50'
         LE = b'\x00'
-        data = self.transmit( GET_DATA + TAG + LE)
-        url = data.decode('ascii')
+        data = self.transmit( GET_DATA + tag + LE)
+        return data
+
+    def get_url(self):
+        url = self.get_data(b'\x5F\x50')
+        url = url.decode('ascii')
         return url
+
+    def get_keyattr(self, key='auth'):
+        TAGs = {'decrypt' : b'\x00\xC2',
+                'sign' : b'\x00\xC1',
+                'auth' : b'\x00\xC3'}
+        data = self.get_data(TAGs[key])
+        print(binascii.hexlify(data).decode('ascii'))
+
 
     def verify_pin(self):
         PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
@@ -144,9 +152,9 @@ class OpenPGPCard():
     def keypair_action(self, P1, keypair):
         HEADER = b'\x00\x47' + P1 + b'\x00'
         LC = b'\x02'
-        CRTs = {'decryption' : b'\xB8\x00',
-                'signature' : b'\xB6\x00',
-                'authentication' : b'\xA4\x00'}
+        CRTs = {'decrypt' : b'\xB8\x00',
+                'sign' : b'\xB6\x00',
+                'auth' : b'\xA4\x00'}
         CRT = CRTs[keypair]
         LE = b'\x00'
         data = self.transmit( HEADER + LC + CRT + LE)
@@ -163,8 +171,8 @@ class OpenPGPCard():
         return public_key
 
     def sign_digest(self, digest, keypair):
-        SIGNING_KEY = {'signature' : b'\x00\x2A\x9E\x9A',
-                     'authentication' : b'\x00\x88\x00\x00'}
+        SIGNING_KEY = {'sign' : b'\x00\x2A\x9E\x9A',
+                     'auth' : b'\x00\x88\x00\x00'}
         LC = bytes([len(digest)])
         LE = b'\x00'
         signature = self.transmit( SIGNING_KEY[keypair] + LC + digest + LE)

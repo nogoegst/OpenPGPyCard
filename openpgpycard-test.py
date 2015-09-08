@@ -12,12 +12,18 @@ if __name__ == "__main__":
     print(card.serial)
 
     print(card.get_url())
-    key_auth = card.get_pubkey('authentication')
+    key_auth = card.get_pubkey('auth')
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    key_auth = card.get_pubkey('signature')
+    card.get_keyattr('auth')
+
+    key_auth = card.get_pubkey('sign')
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    key_auth = card.get_pubkey('decryption')
+    card.get_keyattr('sign')
+
+    key_auth = card.get_pubkey('decrypt')
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
+    card.get_keyattr('decrypt')
+    
     #card.verify_admin_pin()
     #card.gen_keypair()
 
@@ -28,12 +34,12 @@ if __name__ == "__main__":
     hexdigest = binascii.hexlify(digest)
     print("Digest = " + hexdigest.decode('utf-8'))
 
-    signature = card.sign_digest(digest, 'signature')
+    signature = card.sign_digest(digest, 'sign')
     phex(signature)
     print("Length of the signature = " + repr(len(signature)*8) + " bits")
 
     card.verify_pin2()
 
-    signature = card.sign_digest(digest, 'authentication')
+    signature = card.sign_digest(digest, 'auth')
     phex(signature)
     print("Length of the signature = " + repr(len(signature)*8) + " bits")
