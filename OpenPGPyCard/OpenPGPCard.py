@@ -112,6 +112,12 @@ class OpenPGPCard():
         data = self.transmit( GET_DATA + tag + LE)
         return data
 
+    def put_data(self, tag, data):
+        PUT_DATA = b'\x00\xDA'
+        LC = bytes([len(data)])
+        print(LC)
+        data = self.transmit( PUT_DATA + tag + LC + data)
+
     def get_url(self):
         url = self.get_data(b'\x5F\x50')
         url = url.decode('ascii')
@@ -123,6 +129,17 @@ class OpenPGPCard():
                 'auth' : b'\x00\xC3'}
         data = self.get_data(TAGs[key])
         print(binascii.hexlify(data).decode('ascii'))
+
+    def set_keyattr(self, key='auth'):
+        TAGs = {'decrypt' : b'\x00\xC2',
+                'sign' : b'\x00\xC1',
+                'auth' : b'\x00\xC3'}
+        alg_id = b'\x01'
+        modulus_len = b'\x08\x00'
+        exp_len = b'\x00\x20'
+        fmt = b'\x00'
+        rsa1024 = alg_id + modulus_len + exp_len + fmt
+        data = self.put_data(TAGs[key], rsa1024)
 
 
     def verify_pin(self):

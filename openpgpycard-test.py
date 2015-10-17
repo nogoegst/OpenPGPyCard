@@ -7,23 +7,18 @@ import Crypto.Util.number
 phex = lambda x: print(''.join("{:02x}".format(byte) for byte in x))
 
 if __name__ == "__main__":
-    card = OpenPGPCard(transmitter='scd')
+    card = OpenPGPCard(transmitter='pcscd')
     print(card.version)
     print(card.serial)
 
     print(card.get_url())
-    key_auth = card.get_pubkey('auth')
-    phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    card.get_keyattr('auth')
 
+    #card.verify_admin_pin()
+    #card.set_keyattr(key='auth')
+    #card.get_keyattr(key='sign')
     key_auth = card.get_pubkey('sign')
     phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    card.get_keyattr('sign')
 
-    key_auth = card.get_pubkey('decrypt')
-    phex(Crypto.Util.number.long_to_bytes(key_auth.n))
-    card.get_keyattr('decrypt')
-    
     #card.verify_admin_pin()
     #card.gen_keypair()
 
