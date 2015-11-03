@@ -39,9 +39,10 @@ def parse_DO(data):
 
 class OpenPGPCard():
     
-    def __init__(self, transmitter='pcscd'):
+    def __init__(self, transmitter='pcscd', timeout=0):
         self.errorchecker = ISO7816_4ErrorChecker()
         self.transmitter = transmitter
+        self.timeout = timeout
         if transmitter == 'pcscd':
             self.pcscd_prepare()
         self.get_aid()
@@ -77,7 +78,7 @@ class OpenPGPCard():
     def wait(self):
         ATR = list(bytes.fromhex("3BDA18FF81B1FE751F030031C573C001400090000C"))
         cardtype = ATRCardType(ATR)
-        cardrequest = CardRequest(timeout=None, cardType=cardtype)
+        cardrequest = CardRequest(timeout=self.timeout, cardType=cardtype)
         cardservice = cardrequest.waitforcard()
         self.connection = cardservice.connection
 
@@ -196,8 +197,7 @@ class OpenPGPCard():
         return signature
 
     def set_forcesig(self, value=b'\x01'):
-        PUT_DATA = b'\x00\xDA'
         TAG = b'\x00\xC4'
-        LC = b'\x01'
-        self.transmit( PUT_DATA + TAG + LC + value )
+        #LC = b'\x01'
+        self.put_data( TAG, value )
 
