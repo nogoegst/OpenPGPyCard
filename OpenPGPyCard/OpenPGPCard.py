@@ -143,21 +143,22 @@ class OpenPGPCard():
         data = self.put_data(TAGs[key], rsa1024)
 
 
-    def verify_pin(self):
-        PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
-        return self.verify_pw(b'\x81', PW)
+    def verify_pin(self, pin='123456', batch=False):
+        return self.verify_pw(b'\x81', pin, batch)
     
-    def verify_pin2(self):
-        PW = getpass.getpass('Enter a PIN for the card '+self.serial+': ')
-        return self.verify_pw(b'\x82', PW)
+    def verify_pin2(self, pin='123456', batch=False):
+        return self.verify_pw(b'\x82', pin, batch)
 
-    def verify_admin_pin(self):
-        PW = getpass.getpass('Enter Admin PIN for the card '+self.serial+': ')
-        return self.verify_pw(b'\x83', PW)
+    def verify_admin_pin(self, pin='12345678', batch=False):
+        return self.verify_pw(b'\x83', pin, batch)
     
-    def verify_pw(self, P2, PW):
+    def verify_pw(self, P2, pin, batch=False):
+        pin_names = {b'\x81':'PIN', b'\x82':'PIN', b'\x83':'Admin PIN'}
+
         VERIFY = b'\x00\x20\x00' + P2
-        PW = PW.encode('ascii')
+        if not batch:
+            pin = getpass.getpass('Enter {:s} for the card {:s}: '.format(pin_names[P2], self.serial))
+        PW = pin.encode('ascii')
         LC = bytes([len(PW)])
         self.transmit(VERIFY + LC + PW)
 

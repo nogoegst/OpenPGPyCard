@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     #card.set_forcesig(0x00)
     
-    card.verify_pin()
+    card.verify_pin(pin='1234596', batch=True)
     digest = hashlib.sha1("msga".encode('utf-8')).digest()
     hexdigest = binascii.hexlify(digest)
     print("Digest = " + hexdigest.decode('utf-8'))
