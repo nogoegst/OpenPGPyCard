@@ -1,4 +1,4 @@
-from OpenPGPyCard.OpenPGPCard import OpenPGPCard
+import OpenPGPyCard
 import hashlib
 import binascii
 import sys
@@ -7,7 +7,7 @@ import Crypto.Util.number
 phex = lambda x: print(''.join("{:02x}".format(byte) for byte in x))
 
 if __name__ == "__main__":
-    card = OpenPGPCard(transmitter='pcscd')
+    card = OpenPGPyCard.Card(transmitter='pcscd')
     print(card.version)
     print(card.serial)
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     #card.set_forcesig(0x00)
     
-    card.verify_pin(pin='1234596', batch=True)
+    card.verify_pin(pin='123456', batch=True)
     digest = hashlib.sha1("msga".encode('utf-8')).digest()
     hexdigest = binascii.hexlify(digest)
     print("Digest = " + hexdigest.decode('utf-8'))

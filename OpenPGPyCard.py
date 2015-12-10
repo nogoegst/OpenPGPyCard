@@ -37,7 +37,7 @@ def parse_DO(data):
         DO[header][tag]=tag_data
     return DO
 
-class OpenPGPCard():
+class Card():
     
     def __init__(self, transmitter='pcscd', timeout=0):
         self.errorchecker = ISO7816_4ErrorChecker()
